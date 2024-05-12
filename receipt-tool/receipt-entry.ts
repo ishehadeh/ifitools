@@ -1,10 +1,9 @@
-import { Confirm, Input, Number, prompt, Toggle } from "cliffy/prompt/mod.ts";
+import { Input, prompt } from "cliffy/prompt/mod.ts";
 import { Amount } from "./prompts/Amount.ts";
 import { keypress, KeyPressEvent } from "cliffy/keypress/mod.ts";
-import { Posting, postingSchema } from "../ifx/ifx-zod.ts";
-import { formatIfxAmount } from "../ifx/utils.ts";
+import { postingSchema } from "../ifx/ifx-zod.ts";
 import { AddressExtModel, ReceiptExtModel } from "./receipt-ext.ts";
-import { bigint, z } from "zod";
+import { z } from "zod";
 import { bigNumberToIfxAmount } from "./util.ts";
 import BigNumber from "bignumber";
 
@@ -12,7 +11,6 @@ function suggestDate(inp: string): string[] {
   const parts = inp.split("-");
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
   if (parts.length <= 1) {
     return [0, 1, 2, 3].map((x) => currentYear - x).map((x) =>
       x.toString().padStart(4, " ")
@@ -109,12 +107,21 @@ const tax = await prompt([{
 
 const payments = [];
 while (true) {
-  // await prompt([{
-  //   name: "type",
-  //   message: "Type",
-  //   type: String,
-  //   val,
-  // }]);
+  const paymentInfo: { account: string; amount: BigNumber } = await prompt([{
+    name: "account",
+    message: "Account",
+    type: Input,
+  }, {
+    name: "amount",
+    message: "Amount",
+    type: Amount,
+    default: postings
+      .reduce((a, b) => a.plus(b.amount!), new BigNumber(0))
+      .plus(tax.tax!).minus(
+        payments.reduce((a, b) => a.plus(b.amount!), new BigNumber(0)),
+      ),
+  }]);
+  payments.push(paymentInfo);
   console.log("q to quit");
   const event: KeyPressEvent = await keypress();
   if (event.key == "q") {
@@ -124,8 +131,10 @@ while (true) {
 
 const ReceiptProductModel = postingSchema(ReceiptExtModel);
 const ReceiptTaxModel = postingSchema(AddressExtModel);
+const ReceiptPaymentModel = postingSchema(AddressExtModel);
 type ReceiptProduct = z.infer<typeof ReceiptProductModel>;
 type ReceiptTax = z.infer<typeof ReceiptProductModel>;
+type ReceiptPaymentModel = z.infer<typeof ReceiptPaymentModel>;
 
 const fmtDateStr = state.date! + "T" + new Date().toISOString().split("T");
 
@@ -168,4 +177,27 @@ const ifxTaxItem: ReceiptTax[] = [{
   },
 }];
 
-console.log(JSON.stringify([...ifxLineItemPosting, ifxTaxItem], undefined, 2));
+const ifxPaymentItems: ReceiptPaymentModel[] = payments.map((p) => ({
+  account: p.account!,
+  date: fmtDateStr,
+  amount: bigNumberToIfxAmount(p.amount!),
+  commodity: "USD",
+  status: "CLEARED",
+  ext: {
+    address: {
+      street: state.street,
+      city: state.city!,
+      state: state.state!,
+      zip: state.zip!,
+      country: "US",
+    },
+  },
+}));
+Deno.writeTextFileSync(
+  `${state.business}_${state.recieptNumber}`,
+  JSON.stringify(
+    [...ifxLineItemPosting, ifxTaxItem, ...ifxPaymentItems],
+    undefined,
+    2,
+  ),
+);
