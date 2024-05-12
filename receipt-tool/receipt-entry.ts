@@ -6,38 +6,7 @@ import { AddressExtModel, ReceiptExtModel } from "./receipt-ext.ts";
 import { z } from "zod";
 import { bigNumberToIfxAmount } from "./util.ts";
 import BigNumber from "bignumber";
-
-function suggestDate(inp: string): string[] {
-  const parts = inp.split("-");
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  if (parts.length <= 1) {
-    return [0, 1, 2, 3].map((x) => currentYear - x).map((x) =>
-      x.toString().padStart(4, " ")
-    );
-  } else if (parts.length == 2) {
-    let enteredYear = currentYear;
-    try {
-      enteredYear = parseInt(parts[0], 10);
-    } catch (_e) { /* default to current year */ }
-    const firstMonth = currentYear == enteredYear ? currentDate.getMonth() : 0;
-    const monthSuggestions = [];
-    for (let i = 0; i <= firstMonth; ++i) {
-      monthSuggestions.push((firstMonth - i).toString().padStart(2, "0"));
-    }
-    for (let i = firstMonth + 1; i < 12; ++i) {
-      monthSuggestions.push(i.toString().padStart(2, "0"));
-    }
-
-    return monthSuggestions.map((m) => [parts[0], m].join("-"));
-  } else {
-    const arr = [];
-    for (let i = 1; i < 32; ++i) {
-      arr.push(i.toString().padStart(2, "0"));
-    }
-    return arr.map((m) => [parts[0], parts[1], m].join("-"));
-  }
-}
+import { DatePrompt } from "./prompts/Date.ts";
 
 const state = await prompt([{
   name: "business",
@@ -72,9 +41,8 @@ const state = await prompt([{
 }, {
   name: "date",
   message: "Date",
-  type: Input,
+  type: DatePrompt,
   list: true,
-  suggestions: suggestDate,
 }]);
 
 const postings = [];
@@ -133,14 +101,12 @@ const ReceiptProductModel = postingSchema(ReceiptExtModel);
 const ReceiptTaxModel = postingSchema(AddressExtModel);
 const ReceiptPaymentModel = postingSchema(AddressExtModel);
 type ReceiptProduct = z.infer<typeof ReceiptProductModel>;
-type ReceiptTax = z.infer<typeof ReceiptProductModel>;
+type ReceiptTax = z.infer<typeof ReceiptTaxModel>;
 type ReceiptPaymentModel = z.infer<typeof ReceiptPaymentModel>;
-
-const fmtDateStr = state.date! + "T" + new Date().toISOString().split("T");
 
 const ifxLineItemPosting: ReceiptProduct[] = postings.map((p) => ({
   account: "expense",
-  date: fmtDateStr,
+  date: state.date!,
   amount: bigNumberToIfxAmount(p.amount!),
   commodity: "USD",
   status: "CLEARED",
@@ -162,7 +128,7 @@ const ifxLineItemPosting: ReceiptProduct[] = postings.map((p) => ({
 
 const ifxTaxItem: ReceiptTax[] = [{
   account: "tax",
-  date: fmtDateStr,
+  date: state.date!,
   amount: bigNumberToIfxAmount(tax.tax!),
   commodity: "USD",
   status: "CLEARED",
@@ -179,7 +145,7 @@ const ifxTaxItem: ReceiptTax[] = [{
 
 const ifxPaymentItems: ReceiptPaymentModel[] = payments.map((p) => ({
   account: p.account!,
-  date: fmtDateStr,
+  date: state.date!,
   amount: bigNumberToIfxAmount(p.amount!),
   commodity: "USD",
   status: "CLEARED",
@@ -194,7 +160,7 @@ const ifxPaymentItems: ReceiptPaymentModel[] = payments.map((p) => ({
   },
 }));
 Deno.writeTextFileSync(
-  `${state.business}_${state.recieptNumber}`,
+  `${state.business}_${state.recieptNumber}.json`,
   JSON.stringify(
     [...ifxLineItemPosting, ifxTaxItem, ...ifxPaymentItems],
     undefined,
