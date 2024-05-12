@@ -6,7 +6,6 @@ import { formatIfxAmount } from "../ifx/utils.ts";
 import { AddressExtModel, ReceiptExtModel } from "./receipt-ext.ts";
 import { bigint, z } from "zod";
 import { bigNumberToIfxAmount } from "./util.ts";
-// @deno-types="https://raw.githubusercontent.com/MikeMcl/bignumber.js/v9.1.2/bignumber.d.ts"
 import BigNumber from "bignumber";
 
 function suggestDate(inp: string): string[] {

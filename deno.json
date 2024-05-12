@@ -1,3 +1,8 @@
 {
-  "importMap": "./import_map.json"
+  "importMap": "./import_map.json",
+  "compilerOptions": {
+    "types": [
+      "https://raw.githubusercontent.com/MikeMcl/bignumber.js/v9.1.2/bignumber.d.ts"
+    ]
+  }
 }

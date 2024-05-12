@@ -1,7 +1,7 @@
 {
   "imports": {
     "zod": "npm:zod",
-    "bignumber": "https://raw.githubusercontent.com/mikemcl/bignumber.js/v9.1.2/bignumber.mjs",
+    "bignumber": "./third-party/bignumber-shim.ts",
     "cliffy/": "https://deno.land/x/cliffy@v1.0.0-rc.4/"
   }
 }
