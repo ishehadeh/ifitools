@@ -5,7 +5,7 @@ import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 
 /* global document, Office, module, require */
 
-const title = "Contoso Task Pane Add-in";
+const title = "IFX to Excel";
 
 const rootElement: HTMLElement | null = document.getElementById("container");
 const root = rootElement ? createRoot(rootElement) : undefined;
@@ -15,7 +15,7 @@ Office.onReady(() => {
   root?.render(
     <FluentProvider theme={webLightTheme}>
       <App title={title} />
-    </FluentProvider>,
+    </FluentProvider>
   );
 });
 
