@@ -1,3 +1,7 @@
 # Editors
 
 .vscode/
+
+# ifx-office
+ifx-office/node_modules
+ifx-office/dist
