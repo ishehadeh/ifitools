@@ -5,7 +5,7 @@ export const AmountString = z.string().regex(
 );
 export type AmountString = z.infer<typeof AmountString>;
 export const CommondityString = z.string().regex(/^[A-Z]+$/);
-export type CommondityString = z.infer<typeof CommondityString>;
+export type CommodityString = z.infer<typeof CommondityString>;
 
 export const ExtensionList = z.record(
   z.string().regex(/[_\-a-z][a-z0-9_\-]+/),
@@ -39,6 +39,23 @@ export const postingSchema = <T extends Record<string, unknown>>(
 
 export const Posting = postingSchema(ExtensionList);
 
-export type Posting<T extends Record<string, unknown>> = z.infer<
-  ReturnType<typeof postingSchema<T>>
->;
+export type Posting<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  date: string;
+  amount: AmountString;
+  commodity: CommodityString;
+  status: Status;
+  account: string;
+  ext: T;
+};
+
+export function postingHasExtension<
+  PostingExtT extends Record<string, unknown>,
+  ValidateExtT extends Record<string, unknown>,
+>(
+  p: Posting<PostingExtT> | Posting<PostingExtT | ValidateExtT>,
+  ext: z.ZodSchema<ValidateExtT>,
+): p is Posting<ValidateExtT> {
+  return ext.safeParse(p.ext).success;
+}
