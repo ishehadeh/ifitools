@@ -3,6 +3,7 @@ import { postingSchema } from "../../ifx/ifx-zod.ts";
 import { BalanceExtModel, DescriptionExtModel } from "../../ifx-ext/mod.ts";
 import * as z from "zod";
 import { formatIfxDate } from "../../ifx/utils.ts";
+import { IfxImporter } from "../common.ts";
 
 // PNCActivityRecord represents a single line in a PNC accountActivity file.
 // These files can be obtained from pnc.com > Account Activity, and clicking "export" above the transaction table.
@@ -72,7 +73,7 @@ export function csvActivityRecordToIFX(
   };
 }
 
-export class PNCAcitivityImporter {
+export class PNCAcitivityImporter implements IfxImporter {
   constructor() {}
 
   import(file: Uint8Array): PNCIfxPosting[] {

@@ -1,3 +1,2 @@
 #!/bin/sh
-
 exec deno run -- "$0/../../ifx-import/bin/ifx-import.ts" "$@"

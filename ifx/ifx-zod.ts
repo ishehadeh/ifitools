@@ -4,8 +4,13 @@ export const AmountString = z.string().regex(
   /^[\+\-][0-9,]+.[0-9]([0-9]*[1-9])?$/,
 );
 export type AmountString = z.infer<typeof AmountString>;
+
 export const CommondityString = z.string().regex(/^[A-Z]+$/);
 export type CommodityString = z.infer<typeof CommondityString>;
+
+/// ISO w/second precision & tz offset. i.e. YYYY-MM-DDTHH:MM:SS(+|-)HH:MM
+export const IfxDateModel = z.string().datetime({ offset: true });
+export type IfxDate = z.infer<typeof IfxDateModel>;
 
 export const ExtensionList = z.record(
   z.string().regex(/[_\-a-z][a-z0-9_\-]+/),
@@ -16,8 +21,7 @@ export const Status = z.enum(["CLEARED", "PENDING", "VOID", "UNKNOWN"]);
 export type Status = z.infer<typeof Status>;
 
 export const PostingCore = z.object({
-  /// ISO YYYY-MM-DDTHH:MM:SS[(+|-)HH:MM
-  date: z.string().datetime({ offset: true }),
+  date: IfxDateModel,
   amount: AmountString,
   commodity: CommondityString,
   status: Status,
@@ -29,7 +33,7 @@ export const postingSchema = <T extends Record<string, unknown>>(
   extSchema: z.ZodSchema<T>,
 ) =>
   z.object({
-    date: z.string().datetime({ offset: true }),
+    date: IfxDateModel,
     amount: AmountString,
     commodity: CommondityString,
     status: Status,

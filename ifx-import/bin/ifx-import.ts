@@ -2,13 +2,17 @@
 import { PNCAcitivityImporter } from "../pnc/pnc-activity.ts";
 import { Command, EnumType } from "cliffy/command/mod.ts";
 import { readAllSync } from "jsr:@std/io/read-all";
+import { CapitalOneTransactionCSV } from "../pnc/capitalone-transactions-csv.ts";
+import { IfxImporter } from "../common.ts";
 
 enum Importer {
   PncActivity = "pnc-activity",
+  CaptialOneCSV = "capitalone-csv",
 }
 
 const IMPORTERS = {
   [Importer.PncActivity]: PNCAcitivityImporter,
+  [Importer.CaptialOneCSV]: CapitalOneTransactionCSV,
 } as const;
 
 await new Command()
@@ -31,7 +35,7 @@ function runImporter(importerName: Importer, file?: string) {
     data = Deno.readFileSync(file);
   }
 
-  const importer = new IMPORTERS[importerName]();
+  const importer: IfxImporter = new IMPORTERS[importerName]();
   for (const result of importer.import(data)) {
     console.log(JSON.stringify(result));
   }
