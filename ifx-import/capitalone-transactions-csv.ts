@@ -1,13 +1,13 @@
 import { parse as csvParse } from "jsr:@std/csv";
-import { postingSchema } from "../../ifx/ifx-zod.ts";
+import { postingSchema } from "../ifx/ifx-zod.ts";
 import {
   BudgetCategoryExtModel,
   ClearDateExtModel,
   DescriptionExtModel,
-} from "../../ifx-ext/mod.ts";
+} from "../ifx-ext/mod.ts";
 import * as z from "zod";
-import { formatIfxDate } from "../../ifx/utils.ts";
-import { IfxImporter } from "../common.ts";
+import { formatIfxDate } from "../ifx/utils.ts";
+import { IfxImporter } from "./common.ts";
 
 export type CapitalOneTransactionRecord = {
   "Transaction Date": string;
