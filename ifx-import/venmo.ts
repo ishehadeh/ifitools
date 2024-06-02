@@ -1,5 +1,13 @@
 import { parse } from "jsr:@std/csv";
 import BigNumber from "bignumber";
+import { Posting } from "../ifx/ifx-zod.ts";
+import {
+  formatIfxAmount,
+  formatIfxDate,
+  mapCurrencySymbolToCommodity,
+} from "../ifx/utils.ts";
+import { IfxImporter } from "./common.ts";
+import { DescriptionExt, PayeeExt } from "../ifx-ext/mod.ts";
 
 export type VenmoActivityRecord = {
   id: string;
@@ -233,6 +241,33 @@ export function readVenmoActivityCSV(
   };
 }
 
-console.log(
-  JSON.stringify(readVenmoActivityCSV(Deno.readTextFileSync(Deno.args[0]))),
-);
+export function venmoActivityToIfi(
+  venmoActivity: VenmoActivity,
+): Posting<DescriptionExt | PayeeExt>[] {
+  // TODO: begining/ending balances
+  return venmoActivity.activity.filter((record) =>
+    record.status !== VenmoTransactionStatus.Failed
+  ).map((record) => {
+    return {
+      date: formatIfxDate(record.datetime),
+      status: record.status == VenmoTransactionStatus.Complete
+        ? "CLEARED"
+        : "PENDING",
+      amount: formatIfxAmount(record.amountTotal.quantity),
+      commodity: mapCurrencySymbolToCommodity(record.amountTotal.currency),
+      account: venmoActivity.username,
+      ext: {
+        description: record.note,
+
+        payee: record.from,
+      }, // TODO add extra data in a dedicated extension
+    };
+  });
+}
+
+export class VenmoIfxImporter implements IfxImporter {
+  import(file: Uint8Array): Iterable<Posting> {
+    const fileText = new TextDecoder().decode(file);
+    return venmoActivityToIfi(readVenmoActivityCSV(fileText));
+  }
+}

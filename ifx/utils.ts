@@ -1,4 +1,6 @@
-export function formatIfxAmount(n: number): string {
+import BigNumber from "bignumber";
+
+export function formatIfxAmount(n: number | BigNumber): string {
   let s = n.toFixed();
   if (s[0] == ".") {
     s = "0." + s;
@@ -27,4 +29,14 @@ export function formatIfxDate(date: Date): string {
     ":" + pad(date.getSeconds()) +
     dif + pad(Math.floor(Math.abs(tzo) / 60)) +
     ":" + pad(Math.abs(tzo) % 60);
+}
+
+export function mapCurrencySymbolToCommodity(symbol: string): string {
+  switch (symbol) {
+    case "$":
+      return "USD";
+    // TODO: rest of these....
+    default:
+      throw new Error("unrecognized currency symbol: " + symbol);
+  }
 }

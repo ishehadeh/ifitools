@@ -4,15 +4,18 @@ import { Command, EnumType } from "cliffy/command/mod.ts";
 import { readAllSync } from "jsr:@std/io/read-all";
 import { CapitalOneTransactionCSV } from "../capitalone-transactions-csv.ts";
 import { IfxImporter } from "../common.ts";
+import { VenmoIfxImporter } from "../venmo.ts";
 
 enum Importer {
   PncActivity = "pnc-activity",
   CaptialOneCSV = "capitalone-csv",
+  Venmo = "venmo",
 }
 
 const IMPORTERS = {
   [Importer.PncActivity]: PNCAcitivityImporter,
   [Importer.CaptialOneCSV]: CapitalOneTransactionCSV,
+  [Importer.Venmo]: VenmoIfxImporter,
 } as const;
 
 await new Command()
