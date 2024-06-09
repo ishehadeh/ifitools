@@ -30,7 +30,7 @@ export const PostingCore = z.object({
 // A single line item on a ledger
 
 export const postingSchema = <T extends Record<string, unknown>>(
-  extSchema: z.ZodSchema<T>,
+  ...extSchema: z.ZodSchema<Partial<T>>[]
 ) =>
   z.object({
     date: IfxDateModel,
@@ -38,7 +38,7 @@ export const postingSchema = <T extends Record<string, unknown>>(
     commodity: CommondityString,
     status: Status,
     account: z.string(),
-    ext: extSchema,
+    ext: extSchema.reduce((r, l) => z.intersection(l, r)),
   });
 
 export const Posting = postingSchema(ExtensionList);
@@ -62,4 +62,12 @@ export function postingHasExtension<
   ext: z.ZodSchema<ValidateExtT>,
 ): p is Posting<ValidateExtT> {
   return ext.safeParse(p.ext).success;
+}
+
+export function mapExt<T, ExtT extends Record<string, unknown>>(
+  p: Posting,
+  ext: z.ZodSchema<ExtT>,
+  op: (a: ExtT) => T,
+): T | undefined {
+  return postingHasExtension(p, ext) ? op(p.ext) : undefined;
 }
