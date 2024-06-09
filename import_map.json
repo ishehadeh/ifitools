@@ -2,6 +2,8 @@
   "imports": {
     "zod": "npm:zod",
     "bignumber": "./third-party/bignumber-shim.ts",
-    "cliffy/": "https://deno.land/x/cliffy@v1.0.0-rc.4/"
+    "cliffy/": "https://deno.land/x/cliffy@v1.0.0-rc.4/",
+    "unpdf/": "https://esm.sh/unpdf@0.10.1/dist/",
+    "unpdf": "https://esm.sh/unpdf@0.10.1"
   }
 }
