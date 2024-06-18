@@ -1,6 +1,6 @@
 import { stringify } from "jsr:@std/csv";
 import * as json from "https://deno.land/std@0.224.0/json/mod.ts";
-import { TextLineStream } from "https://deno.land/std/streams/mod.ts";
+import { TextLineStream } from "https://deno.land/std@0.224.0/streams/mod.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { basename } from "https://deno.land/std@0.224.0/path/basename.ts";
 import { join } from "https://deno.land/std@0.224.0/path/join.ts";
