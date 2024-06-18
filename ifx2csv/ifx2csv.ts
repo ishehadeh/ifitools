@@ -9,7 +9,7 @@ import { Command } from "cliffy/command/mod.ts";
 await new Command()
   .name("ifx2csv")
   .version("0.1.0")
-  .description("Convert various things to IFX")
+  .description("Use small web worker script (adapters) to convert ifx to csv")
   .option("-a,--adapter <name:string>", "file type to import", {
     required: true,
   })
@@ -52,7 +52,12 @@ async function main(plugin: string, file?: string) {
       type: "module",
 
       "deno": {
-        "permissions": "none",
+        "permissions": {
+          "read": [
+            new URL(import.meta.resolve("./.."))
+              .pathname,
+          ],
+        },
       },
     },
   );
@@ -107,8 +112,10 @@ async function main(plugin: string, file?: string) {
 
   worker.postMessage({ t: "headers", seq: seq(), data: null });
 
-  const inputRaw = file ? await Deno.open(file) : Deno.stdin;
-  const input = inputRaw.readable
+  const inputRaw = file
+    ? (await Deno.open(file)).readable
+    : Deno.stdin.readable;
+  const input = inputRaw
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(new TextLineStream())
     .pipeThrough(new json.JsonParseStream());
