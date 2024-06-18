@@ -1,0 +1,2 @@
+[env]
+PATH = "{{config_root}}/bin"
