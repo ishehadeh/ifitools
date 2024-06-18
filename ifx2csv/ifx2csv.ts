@@ -1,50 +1,49 @@
 import { stringify } from "jsr:@std/csv";
 import * as json from "https://deno.land/std@0.224.0/json/mod.ts";
-import { Posting } from "../ifx/ifx-zod.ts";
 import { TextLineStream } from "https://deno.land/std/streams/mod.ts";
-import { ExtensionFlattener } from "./ext/common.ts";
-import PayeeExtAdapter from "./ext/payee.ts";
-import DescriptionExtAdapter from "./ext/description.ts";
-import { encodeBase64 } from "https://deno.land/std@0.221.0/encoding/base64.ts";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { basename } from "https://deno.land/std@0.224.0/path/basename.ts";
+import { join } from "https://deno.land/std@0.224.0/path/join.ts";
+import { Command } from "cliffy/command/mod.ts";
 
-export class CSVConverter<
-  ExtFieldSetsT extends string[],
-> {
-  constructor(
-    public adapters: {
-      [I in keyof ExtFieldSetsT]: ExtensionFlattener<ExtFieldSetsT[I]>;
-    },
-  ) {
+await new Command()
+  .name("ifx2csv")
+  .version("0.1.0")
+  .description("Convert various things to IFX")
+  .option("-a,--adapter <name:string>", "file type to import", {
+    required: true,
+  })
+  .arguments("[input:string]")
+  .action(({ adapter }, file) => main(adapter, file))
+  .parse(Deno.args);
+
+async function main(plugin: string, file?: string) {
+  const pluginKw: Record<string, string> = {};
+
+  // TODO: verify this module is local
+  const defaultPluginPath = new URL(import.meta.resolve("./modules")).pathname;
+  try {
+    for (const module of Deno.readDirSync(defaultPluginPath)) {
+      if (module.isFile && module.name.endsWith(".ts")) {
+        pluginKw[basename(module.name, ".ts")] = join(
+          defaultPluginPath,
+          module.name,
+        );
+      }
+    }
+  } catch (e) {
+    console.warn(`could not discover default plugins: ${e}`);
   }
 
-  convert(
-    posting: Posting,
-  ): Record<
-    | "date"
-    | "status"
-    | "account"
-    | "amount"
-    | "commodity"
-    | ExtFieldSetsT[number],
-    string
-  > {
-    return Object.assign({
-      "date": posting.date,
-      "status": posting.status,
-      "amount": posting.amount,
-      "commodity": posting.commodity,
-      "account": posting.account,
-    }, ...this.adapters.map((adapter) => adapter(posting)));
+  let pluginPath = pluginKw[plugin] ?? plugin;
+  if (!/^[a-zA-Z]+:\/\//.test(pluginPath)) {
+    pluginPath = `file://${pluginPath}`;
   }
-}
 
-async function main(plugin: string) {
-  const root = `${import.meta.dirname}/modules`;
-  const workerScript = Deno.readTextFileSync(`${root}/webworker-template.ts`)
-    .replace(
-      "{USERMODULE}",
-      import.meta.resolve("./modules/IansExcelSheet.ts"),
-    );
+  const workerScript = Deno.readTextFileSync(
+    new URL(import.meta.resolve("./modules/webworker-template.ts")).pathname,
+  )
+    .replace("{USERMODULE}", pluginPath);
 
   const worker = new Worker(
     "data:application/javascript;charset=utf-8;base64," +
@@ -108,7 +107,8 @@ async function main(plugin: string) {
 
   worker.postMessage({ t: "headers", seq: seq(), data: null });
 
-  const input = Deno.stdin.readable
+  const inputRaw = file ? await Deno.open(file) : Deno.stdin;
+  const input = inputRaw.readable
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(new TextLineStream())
     .pipeThrough(new json.JsonParseStream());
@@ -118,5 +118,3 @@ async function main(plugin: string) {
   done!();
   return promise;
 }
-
-await main("IansExcelSheet");

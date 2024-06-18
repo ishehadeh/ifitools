@@ -1,0 +1,2 @@
+#!/bin/sh
+exec deno run --unstable-worker-options --allow-read="$0/../../ifx2csv/modules/webworker-template.ts" -- "$0/../../ifx2csv/ifx2csv.ts" "$@"

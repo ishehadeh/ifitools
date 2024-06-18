@@ -1,4 +1,5 @@
 import {
+  BalanceExtModel,
   BudgetCategoryExtModel,
   DescriptionExtModel,
   PayeeExtModel,
@@ -12,7 +13,9 @@ export const HEADERS = [
   "Account",
   "Category",
   "Description",
+  "Balance",
 ] as const;
+
 export function transform(p: Posting): Record<typeof HEADERS[number], string> {
   return {
     "Date": p.date.replace(/T.*$/, ""),
@@ -22,5 +25,6 @@ export function transform(p: Posting): Record<typeof HEADERS[number], string> {
     "Category": mapExt(p, BudgetCategoryExtModel, (e) => e.budgetCategory) ??
       "",
     "Description": mapExt(p, DescriptionExtModel, (e) => e.description) ?? "",
+    "Balance": mapExt(p, BalanceExtModel, (e) => e.balancePostTx) ?? "",
   };
 }
