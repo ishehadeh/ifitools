@@ -1,2 +1,5 @@
 [env]
 PATH = "{{config_root}}/bin"
+
+[tools]
+deno = "1"
