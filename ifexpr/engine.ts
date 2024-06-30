@@ -108,12 +108,12 @@ export function ffi(
   return { t: IFExprStackCellType.External, fn };
 }
 
-const env = new IFExprEnv();
-env.setAll({
-  "dbg": ffi((env) => {
-    console.log(env.get(0));
-  }),
-  "add": ffi((env) => {
+function makeSimpleArithFn(
+  name: string,
+  opStr: (x: string, y: string) => string,
+  opNum: (x: BigNumber, y: BigNumber) => BigNumber,
+): IFExprStackCell {
+  return ffi((env) => {
     const a = env.pop()!;
     if (!Array.isArray(a)) {
       throw new Error("type error");
@@ -135,23 +135,43 @@ env.setAll({
         }
 
         result = result.map((v, i) => {
-          env.call("add", [v, x[i]]);
+          env.call(name, [v, x[i]]);
           return env.pop()!;
         });
       } else if (x instanceof BigNumber) {
         if (!(result instanceof BigNumber)) {
           throw new Error("type error");
         }
-        result = result.plus(x);
+        result = opNum(result, x);
       } else {
-        result += x;
+        if (typeof result !== "string") {
+          throw new Error("type error");
+        }
+        result = opStr(result, x);
       }
     }
     env.push(result);
+  });
+}
+
+const env = new IFExprEnv();
+env.setAll({
+  "dbg": ffi((env) => {
+    console.log(env.get(0));
   }),
+  "sum": makeSimpleArithFn("add", (x, y) => x + y, (x, y) => x.plus(y)),
+  "product": makeSimpleArithFn("mul", (x, y) => {
+    throw new Error("type error");
+  }, (x, y) => x.plus(y)),
+  "divide": makeSimpleArithFn("div", (x, y) => {
+    throw new Error("type error");
+  }, (x, y) => x.dividedBy(y)),
+  "subtract": makeSimpleArithFn("div", (x, y) => {
+    throw new Error("type error");
+  }, (x, y) => x.minus(y)),
 });
 
 const program = stack(
-  tokenize(""),
+  tokenize("{1 2 3} product dbg"),
 );
 env.execute(program);
