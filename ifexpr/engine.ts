@@ -33,10 +33,16 @@ export class IFExprEnv {
   private stack: Value[] = [];
   private registers: Record<string, IFExprStackCell> = {};
 
+  constructor(private parent: IFExprEnv | undefined = undefined) {}
+
   execute(program: Iterable<Value>) {
     for (const v of program) {
       this.executionStep(v);
     }
+  }
+
+  child(): IFExprEnv {
+    return new IFExprEnv(this);
   }
 
   set(symbol: string, value: IFExprStackCell) {
@@ -78,11 +84,19 @@ export class IFExprEnv {
     }
   }
 
-  doSymbol(symbol: string) {
+  getSymbol(symbol: string): IFExprStackCell {
     const value = this.registers[symbol];
     if (value === undefined) {
+      if (this.parent) {
+        return this.parent.getSymbol(symbol);
+      }
       throw new IFExprErrorUndefinedSymbol(symbol);
     }
+    return value;
+  }
+
+  doSymbol(symbol: string) {
+    const value = this.getSymbol(symbol);
 
     switch (value.t) {
       case IFExprStackCellType.Executable:
@@ -155,23 +169,62 @@ function makeSimpleArithFn(
 }
 
 const env = new IFExprEnv();
+let COUNTER = 0;
+function getNumber(): number {
+  return COUNTER++;
+}
 env.setAll({
   "dbg": ffi((env) => {
     console.log(env.get(0));
   }),
-  "sum": makeSimpleArithFn("add", (x, y) => x + y, (x, y) => x.plus(y)),
-  "product": makeSimpleArithFn("mul", (x, y) => {
+  "sum": makeSimpleArithFn("sum", (x, y) => x + y, (x, y) => x.plus(y)),
+  "product": makeSimpleArithFn("product", (x, y) => {
     throw new Error("type error");
-  }, (x, y) => x.plus(y)),
-  "divide": makeSimpleArithFn("div", (x, y) => {
+  }, (x, y) => x.multipliedBy(y)),
+  "divide": makeSimpleArithFn("divide", (x, y) => {
     throw new Error("type error");
   }, (x, y) => x.dividedBy(y)),
-  "subtract": makeSimpleArithFn("div", (x, y) => {
+  "subtract": makeSimpleArithFn("subtract", (x, y) => {
     throw new Error("type error");
   }, (x, y) => x.minus(y)),
+  "do": ffi((env) => {
+    const block = env.pop();
+    const sym = `__do${getNumber()}`;
+    env.set(
+      sym,
+      ffi((env) => {
+        if (!Array.isArray(block)) {
+          throw new Error("expected block");
+        }
+        env.execute(block);
+      }),
+    );
+    env.push(sym);
+  }),
+  "let": ffi((env) => {
+    let pair;
+    const child = env.child();
+    while (true) {
+      pair = env.pop();
+      if (typeof pair === "string") {
+        child.doSymbol(pair);
+        for (let v = child.pop(); v !== undefined; v = child.pop()) {
+          env.push(v);
+        }
+        break;
+      }
+      if (!Array.isArray(pair)) {
+        throw new Error("let: expected quoted pair");
+      }
+      if (!(typeof pair[1] == "string")) {
+        throw new Error("let: expected string-value pair");
+      }
+      child.set(pair[1], { t: IFExprStackCellType.Value, value: [pair[0]] });
+    }
+  }),
 });
 
 const program = stack(
-  tokenize("dbg product {1 2 3}"),
+  tokenize("dbg let { ac {1 2 3 4}} do { product dbg ac }"),
 );
 env.execute(program);
