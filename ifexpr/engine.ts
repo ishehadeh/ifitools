@@ -47,6 +47,11 @@ export class IFExprEnv {
     this.registers = Object.assign(this.registers, registers);
   }
 
+  call(fnName: string, ...args: string[]) {
+    args.forEach((x) => this.push(x));
+    this.doSymbol(fnName);
+  }
+
   push(cell: Value) {
     this.stack.push(cell);
   }
@@ -116,7 +121,7 @@ env.setAll({
 
     let result = BigNumber("0");
     for (const x of a) {
-      if (!(x instanceof BigNumber)) {
+      if (x instanceof BigNumber) {
         throw new Error("type error");
       }
       result = result.multipliedBy(x);
