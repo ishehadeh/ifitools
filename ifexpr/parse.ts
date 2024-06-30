@@ -38,9 +38,10 @@ export function* tokenize(
 }
 export type Value = string | BigNumber | Value[];
 
-export function* stack(
+export function stack(
   tokens: Iterator<[number, number, string, TokenType]>,
-): IterableIterator<Value> {
+): Value[] {
+  const values = [];
   for (let t = tokens.next(); !t.done; t = tokens.next()) {
     const [_start, _end, text, tok] = t.value;
     // console.log(`[stack] TOKEN: ${tok} [${text}]`);
@@ -48,17 +49,19 @@ export function* stack(
       // case TokenType.Access:
       //   break;
       case TokenType.Numbers:
-        yield BigNumber(text);
+        values.push(BigNumber(text));
         break;
       case TokenType.QuoteL:
-        yield [...stack(tokens)];
+        values.push(stack(tokens));
         break;
       case TokenType.QuoteR:
-        return;
+        return values.reverse();
       case TokenType.Whitespace:
         break;
       case TokenType.Word:
-        yield text;
+        values.push(text);
     }
   }
+
+  return values.reverse();
 }

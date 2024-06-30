@@ -172,6 +172,6 @@ env.setAll({
 });
 
 const program = stack(
-  tokenize("{1 2 3} product dbg"),
+  tokenize("dbg product {1 2 3}"),
 );
 env.execute(program);
