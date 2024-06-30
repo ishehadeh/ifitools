@@ -47,7 +47,7 @@ export class IFExprEnv {
     this.registers = Object.assign(this.registers, registers);
   }
 
-  call(fnName: string, ...args: string[]) {
+  call(fnName: string, ...args: Value[]) {
     args.forEach((x) => this.push(x));
     this.doSymbol(fnName);
   }
@@ -113,37 +113,45 @@ env.setAll({
   "dbg": ffi((env) => {
     console.log(env.get(0));
   }),
-  "prod": ffi((env) => {
-    const a = env.pop()!;
-    if (!Array.isArray(a)) {
-      throw new Error("type error");
-    }
-
-    let result = BigNumber("0");
-    for (const x of a) {
-      if (x instanceof BigNumber) {
-        throw new Error("type error");
-      }
-      result = result.multipliedBy(x);
-    }
-    env.push(result);
-  }),
   "add": ffi((env) => {
     const a = env.pop()!;
     if (!Array.isArray(a)) {
       throw new Error("type error");
     }
 
-    let result = BigNumber("0");
-    for (const x of a) {
-      if (!(x instanceof BigNumber)) {
+    let result = a[0];
+    for (let index = 1; index < a.length; ++index) {
+      const x = a[index];
+      if (typeof x !== typeof result) {
         throw new Error("type error");
       }
-      result = result.plus(x);
+      if (Array.isArray(x)) {
+        if (!Array.isArray(result)) {
+          throw new Error("type error");
+        }
+
+        if (result.length != x.length) {
+          throw new Error("dim error");
+        }
+
+        result = result.map((v, i) => {
+          env.call("add", [v, x[i]]);
+          return env.pop()!;
+        });
+      } else if (x instanceof BigNumber) {
+        if (!(result instanceof BigNumber)) {
+          throw new Error("type error");
+        }
+        result = result.plus(x);
+      } else {
+        result += x;
+      }
     }
     env.push(result);
   }),
 });
 
-const program = stack(tokenize("{1 2 3} add dbg"));
+const program = stack(
+  tokenize(""),
+);
 env.execute(program);
