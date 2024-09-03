@@ -24,3 +24,14 @@ export const BudgetCategoryExtModel = z.object({
 export type PayeeExt = z.infer<typeof PayeeExtModel>;
 export type DescriptionExt = z.infer<typeof DescriptionExtModel>;
 export type BalanceExt = z.infer<typeof BalanceExtModel>;
+
+export const ProductExtModel = z.object({
+  product: z.object({
+    name: z.string(),
+    quantity: z.object({
+      amount: AmountString,
+      unit: z.string(),
+    }).optional()
+  })
+});
+export type ProductExt = z.infer<typeof ProductExtModel>;

@@ -17,14 +17,14 @@ export const ExtensionList = z.record(
   z.any(),
 );
 
-export const Status = z.enum(["CLEARED", "PENDING", "VOID", "UNKNOWN"]);
-export type Status = z.infer<typeof Status>;
+export const StatusModel = z.enum(["CLEARED", "PENDING", "VOID", "UNKNOWN"]);
+export type Status = z.infer<typeof StatusModel>;
 
 export const PostingCore = z.object({
   date: IfxDateModel,
   amount: AmountString,
   commodity: CommondityString,
-  status: Status,
+  status: StatusModel,
   account: z.string(),
 });
 // A single line item on a ledger
@@ -36,7 +36,7 @@ export const postingSchema = <T extends Record<string, unknown>>(
     date: IfxDateModel,
     amount: AmountString,
     commodity: CommondityString,
-    status: Status,
+    status: StatusModel,
     account: z.string(),
     ext: extSchema.reduce((r, l) => z.intersection(l, r)),
   });
