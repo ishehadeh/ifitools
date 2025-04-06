@@ -60,7 +60,6 @@ async function main(file?: string) {
     .pipeThrough(new TextLineStream())
     .pipeThrough(new json.JsonParseStream());
   
-
   const invoiceGroups: Record<string, Posting[]> = {};
   const lonePostings = []
   for await (const postingObj of input.values()) {
@@ -79,5 +78,8 @@ async function main(file?: string) {
 
   for await (const postings of Object.values(invoiceGroups)) {
     postingsToString(postings);
+  }
+  for await (const postings of lonePostings) {
+    postingsToString([postings]);
   }
 }
