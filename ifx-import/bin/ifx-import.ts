@@ -1,24 +1,21 @@
 #!/bin/env -S deno run --ext=ts --
 import { PNCAcitivityImporter } from "../pnc/pnc-activity.ts";
-import { Command, EnumType } from "@cliffy/command/mod.ts";
+import { Command, EnumType } from "cliffy/command/mod.ts";
 import { readAllSync } from "jsr:@std/io/read-all";
 import { CapitalOneTransactionCSV } from "../capitalone-transactions-csv.ts";
 import { IfxImporter, IfxImporterAsync } from "../common.ts";
 import { VenmoIfxImporter } from "../venmo.ts";
-import { OfxImporter } from "../ofx.ts";
 
 enum Importer {
   PncActivity = "pnc-activity",
   CaptialOneCSV = "capitalone-csv",
   Venmo = "venmo",
-  Ofx = "ofx",
 }
 
 const IMPORTERS = {
   [Importer.PncActivity]: PNCAcitivityImporter,
   [Importer.CaptialOneCSV]: CapitalOneTransactionCSV,
   [Importer.Venmo]: VenmoIfxImporter,
-  [Importer.Ofx]: OfxImporter,
 } as const;
 
 await new Command()
