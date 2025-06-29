@@ -1,4 +1,5 @@
 import { Posting } from "../ifx/ifx-zod.ts";
+import { fireflySearch, TransactionSearchResult } from "./search.ts";
 
 export type TransactionMatcherOptions = {
     /** an override for all source accounts in the given postings, or a map from Firefly Source Account to Posting source account matcher.
@@ -18,25 +19,6 @@ export type TransactionMatcherOptions = {
 
     fireflyKey: string,
     fireflyBaseURL: string,
-}
-
-export type TransactionSearchResult = {
-    id: string,
-    type: 'transaction',
-    attributes: Record<string, any>
-}
-
-export class TransactioMatchError extends Error {
-    response: any;
-    status: number;
-    statusText: string;
-
-    constructor(status: number, statusText: string, response: any) {
-        super('Search Request Failed, error code: ' + status + ', ' + statusText);
-        this.status = status;
-        this.statusText = statusText;
-        this.response = response;
-    }
 }
 
 export class TransactioMatcher {
@@ -69,23 +51,12 @@ export class TransactioMatcher {
         this.#fireflyBaseURL = opts.fireflyBaseURL;
     }
 
-    async findMatchingTransaction(posting: Posting): Promise<TransactionSearchResult[]> {
+    findMatchingTransaction(posting: Posting): Promise<TransactionSearchResult[]> {
         const searchString = this.#generateSearchForPosting(posting);
-        const query = new URLSearchParams();
-        query.set('query', searchString);
-        const result = await fetch(this.#fireflyBaseURL + '/api/v1/search/transactions?' + query.toString(), {
-            'method': 'GET',
-            'headers': {
-                'Authorization':  `Bearer ${this.#fireflyKey}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
+        return fireflySearch(searchString, {
+            apiKey: this.#fireflyKey,
+            baseURL: this.#fireflyBaseURL
         });
-        const resultBody = await result.json();
-        if (!result.ok) {
-            throw new TransactioMatchError(result.status, result.statusText, resultBody);
-        };
-        return resultBody.data as TransactionSearchResult[];
     }
 
     #generateSearchForPosting(posting: Posting): string {
