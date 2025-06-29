@@ -1,34 +1,10 @@
-
-export type FireflyRequestOptions = {
-    apiKey: string,
-    baseURL: string
-}
-
-export type PageOptions =  {
-    limit?: number,
-    page?: number
-}
+import { PageOptions, FireflyRequestOptions, FireflyRequestFailed } from './common.ts';
 
 export type TransactionSearchResult = {
     id: string,
     type: 'transaction',
     attributes: Record<string, any>
 }
-
-export class FireflyRequestFailed extends Error {
-    response: any;
-    status: number;
-    statusText: string;
-
-    constructor(status: number, statusText: string, response: any, url: string) {
-        super(url + ' failed: error code: ' + status + ', ' + statusText);
-        this.status = status;
-        this.statusText = statusText;
-        this.response = response;
-
-    }
-}
-
 
 export async function fireflySearch(query: string, opts: PageOptions & FireflyRequestOptions): Promise<TransactionSearchResult[]> {
     const urlQuery = new URLSearchParams();

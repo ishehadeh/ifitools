@@ -1,5 +1,5 @@
 import { Posting } from "../ifx/ifx-zod.ts";
-import { fireflySearch, TransactionSearchResult } from "./search.ts";
+import { fireflySearch, TransactionSearchResult } from "./firefly-iii/search.ts";
 
 export type TransactionMatcherOptions = {
     /** an override for all source accounts in the given postings, or a map from Firefly Source Account to Posting source account matcher.

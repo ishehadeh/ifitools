@@ -1,11 +1,10 @@
 #!/bin/env -S deno run --ext=ts --
-import { Command, EnumType } from "cliffy/command/mod.ts";
+import { Command } from "cliffy/command/mod.ts";
 import { Posting } from "../../ifx/ifx-zod.ts";
 import * as json from "@std/json/mod.ts";
 import { TextLineStream } from "@std/streams/mod.ts";
 import { TransactioMatcher } from "../matcher.ts";
-import { late } from "zod";
-import { fireflySearch } from "../search.ts";
+import { fireflySearch } from "../firefly-iii/search.ts";
 
 await new Command()
   .name("firefly-match")
