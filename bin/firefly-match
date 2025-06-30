@@ -1,2 +1,2 @@
 #!/bin/sh
-exec deno run --unstable-temporal --allow-env=FIREFLY_KEY --allow-net=finance.shehadeh.net:443 -- "$0/../../firefly-match/bin/firefly-match.ts" "$@"
+exec deno run --unstable-temporal --allow-env=FIREFLY_KEY --allow-net=finance.shehadeh.net:443 -- "$0/../../firefly/bin/firefly-match.ts" "$@"
