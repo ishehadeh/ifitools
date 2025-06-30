@@ -18,11 +18,11 @@ await new Command()
   .option('--source-account <account:string>', 'firefly-III account to search', {required: true})
   .option('--show-unmatched', 'list firefly transactions with dates between the first and last posting, but do not match a posting')
   .arguments('[ifx:string]')
-  .action(({fireflyKey, sourceAccount, showUnmatched}, ifx) => main(ifx, sourceAccount, fireflyKey, showUnmatched))
+  .action(({fireflyKey, sourceAccount, showUnmatched}, ifx) => main(sourceAccount, ifx, fireflyKey, showUnmatched))
   .parse(Deno.args);
 
 
-async function main(file?: string, sourceAccount: string, fireflyKey?: string,  showUnmatched: boolean = false) {
+async function main(sourceAccount: string, file?: string, fireflyKey?: string, showUnmatched: boolean = false) {
     const server = 'https://finance.shehadeh.net';
     const inputRaw = file
         ? (await Deno.open(file)).readable
