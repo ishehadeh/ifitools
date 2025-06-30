@@ -10,11 +10,11 @@ await new Command()
   .name("firefly-match")
   .version("0.1.0")
   .description("try to match IFX transactions to firefly-iii transactions")
-  .option('--firefly-key [fireflyKey:string]', 'firefly-III api key, defaults to $FIREFLY_KEY')
-  .option('--account [account:string]', 'firefly-III account to search')
+  .option('--firefly-key <fireflyKey:string>', 'firefly-III api key, defaults to $FIREFLY_KEY')
+  .option('--account <account:string>', 'firefly-III account to search')
   .option('--show-unmatched', 'list firefly transactions with dates between the first and last posting, but do not match a posting')
   .arguments('[ifx:string]')
-  .action(({ifx, fireflyKey, account, showUnmatched}) => main(ifx, fireflyKey, account, showUnmatched))
+  .action(({fireflyKey, account, showUnmatched}, ifx) => main(ifx, fireflyKey, account, showUnmatched))
   .parse(Deno.args);
 
 
