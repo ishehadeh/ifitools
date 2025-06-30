@@ -12,13 +12,15 @@ await new Command()
   .description("try to match IFX transactions to firefly-iii transactions")
   .option('--firefly-key <fireflyKey:string>', 'firefly-III api key, defaults to $FIREFLY_KEY')
   .option('--account <account:string>', 'firefly-III account to search')
+  .option('--days-before <daysBefore:number>', 'number of days before to allow')
+  .option('--days-after <daysAfter:number>', 'number of days after to allow')
   .option('--show-unmatched', 'list firefly transactions with dates between the first and last posting, but do not match a posting')
   .arguments('[ifx:string]')
-  .action(({fireflyKey, account, showUnmatched}, ifx) => main(ifx, fireflyKey, account, showUnmatched))
+  .action(({fireflyKey, account, showUnmatched, daysBefore, daysAfter}, ifx) => main(ifx, fireflyKey, account, showUnmatched, daysBefore, daysAfter))
   .parse(Deno.args);
 
 
-async function main(file?: string, fireflyKey?: string, account?: string, showUnmatched: boolean = false) {
+async function main(file?: string, fireflyKey?: string, account?: string, showUnmatched: boolean = false, daysBefore: number = 1, daysAfter: number = 1) {
     const server = 'https://finance.shehadeh.net';
     const inputRaw = file
         ? (await Deno.open(file)).readable
@@ -33,7 +35,7 @@ async function main(file?: string, fireflyKey?: string, account?: string, showUn
     let latestPosting = null;
     const matchedIds = [] 
 
-    const matcher = new TransactioMatcher({fireflyBaseURL: 'https://finance.shehadeh.net', fireflyKey })
+    const matcher = new TransactioMatcher({fireflyBaseURL: 'https://finance.shehadeh.net', fireflyKey, bufferTimeBefore: Temporal.Duration.from({days: daysBefore }), bufferTimeAfter: Temporal.Duration.from({days: daysAfter }) })
     for await (const postingJson of input) {
         const posting = Posting.parse(postingJson);
         const date = Temporal.PlainDateTime.from(posting.date);
