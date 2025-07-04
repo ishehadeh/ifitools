@@ -4,7 +4,7 @@ import { Posting } from "../../ifx/ifx-zod.ts";
 import * as json from "@std/json/mod.ts";
 import { TextLineStream } from "@std/streams/mod.ts";
 import { TransactioMatcher } from "../matcher.ts";
-import { fireflySearch } from "../firefly-iii/search.ts";
+import { FireflyClient, throwOnError } from "../firefly-iii/client.ts";
 
 await new Command()
   .name("firefly-match")
@@ -35,7 +35,14 @@ async function main(file?: string, fireflyKey?: string, account?: string, showUn
     let latestPosting = null;
     const matchedIds = [] 
 
-    const matcher = new TransactioMatcher({fireflyBaseURL: 'https://finance.shehadeh.net', fireflyKey, bufferTimeBefore: Temporal.Duration.from({days: daysBefore }), bufferTimeAfter: Temporal.Duration.from({days: daysAfter }) })
+    const client = new FireflyClient({
+        baseUrl: 'https://finance.shehadeh.net/api',
+        apiKey: fireflyKey,
+    })
+    const matcher = new TransactioMatcher(client, {
+        bufferTimeBefore: Temporal.Duration.from({days: daysBefore }),
+        bufferTimeAfter: Temporal.Duration.from({days: daysAfter })
+    });
     for await (const postingJson of input) {
         const posting = Posting.parse(postingJson);
         const date = Temporal.PlainDateTime.from(posting.date);
@@ -67,19 +74,22 @@ async function main(file?: string, fireflyKey?: string, account?: string, showUn
         const limit = 10;
 
         while (true) {
-            const transactions = await fireflySearch(allTransactionsQuery, {
-                apiKey: fireflyKey,
-                baseURL: 'https://finance.shehadeh.net',
-                page,
-                limit
-            });
+            const { data } = await throwOnError(client.fetch.GET('/v1/search/transactions', {
+                params: {
+                    query: {
+                        query: allTransactionsQuery,
+                        page,
+                        limit
+                    }
+                }
+            }));
             page += 1;
-            for (const txn of transactions) {
+            for (const txn of data!.data) {
                 if (!matchedIds.includes(txn.id)) {
                     console.log('    - ' + server + '/transactions/show/' + txn.id);
                 }
             }
-            if (transactions.length < limit) {
+            if (data!.data.length < limit) {
                 break;
             }
         }

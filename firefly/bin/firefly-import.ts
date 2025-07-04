@@ -1,56 +1,70 @@
 #!/bin/env -S deno run --ext=ts --
-import { Command, EnumType } from "cliffy/command/mod.ts";
+import { Command } from "cliffy/command/mod.ts";
 import  { Input } from "cliffy/prompt/mod.ts";
 import { Posting } from "../../ifx/ifx-zod.ts";
 import * as json from "@std/json/mod.ts";
 import { TextLineStream } from "@std/streams/mod.ts";
 import { TransactioMatcher } from "../matcher.ts";
-import { late } from "zod";
-import { fireflySearch } from "../firefly-iii/search.ts";
-import { getAccounts } from "../firefly-iii/accounts.ts";
 import { FireflyRequestFailed } from "../firefly-iii/common.ts";
+import { FireflyAccountRead, fireflyClient, FireflyClient } from "../firefly-iii/client.ts";
+
+type FireflyImportOpts = {
+    fireflyKey: string,
+    fireflyUrl: string,
+    sourceAccount: string,
+    file: string|undefined
+};
 
 await new Command()
   .name("firefly-match")
   .version("0.1.0")
   .description("try to match IFX transactions to firefly-iii transactions")
-  .option('--firefly-key <fireflyKey:string>', 'firefly-III api key, defaults to $FIREFLY_KEY')
+  .option('--firefly-key <fireflyKey:string>', 'firefly-III API key', {
+    required: true
+  })
+  .env('FIREFLY_KEY=<fireflyKey:string>', 'firefly-III API key')
+  .option('--firefly-url <fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)', {
+    required: true
+  })
+  .env('FIREFLY_URL=<fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)')
   .option('--source-account <account:string>', 'firefly-III account to search', {required: true})
-  .option('--show-unmatched', 'list firefly transactions with dates between the first and last posting, but do not match a posting')
-  .arguments('[ifx:string]')
-  .action(({fireflyKey, sourceAccount, showUnmatched}, ifx) => main(sourceAccount, ifx, fireflyKey, showUnmatched))
+  .arguments('[ifxFile:string]')
+  .action((opts, file) => {
+    main({...opts, file})
+  })
   .parse(Deno.args);
 
 
-async function main(sourceAccount: string, file?: string, fireflyKey?: string, showUnmatched: boolean = false) {
+async function main(opts: FireflyImportOpts) {
     const server = 'https://finance.shehadeh.net';
-    const inputRaw = file
-        ? (await Deno.open(file)).readable
+    const inputRaw = opts.file
+        ? (await Deno.open(opts.file)).readable
         : Deno.stdin.readable;
     const input = inputRaw
         .pipeThrough(new TextDecoderStream())
         .pipeThrough(new TextLineStream())
         .pipeThrough(new json.JsonParseStream());
-    fireflyKey ??= Deno.env.get('FIREFLY_KEY');
-    if (fireflyKey == null) throw new Error('FIREFLY_KEY not set');
-    
-    const accounts = [];
+    const client = new FireflyClient({
+        apiKey: opts.fireflyKey,
+        baseUrl: opts.fireflyUrl
+    });
+    const accounts: FireflyAccountRead[] = [];
     let page = 0;
     const limit = 50;
     console.log('fetching account list...');
     while (true) {
-        const accountsPage = await getAccounts({ page, limit, apiKey: fireflyKey, baseURL: 'https://finance.shehadeh.net'});
-        accounts.push(...accountsPage);
-        if (accountsPage.length < limit) break;
+        const accountsPage = await client.accounts.list({ page, limit });
+        accounts.push(...accountsPage.data);
+        if (accountsPage.data.length < limit) break;
         page += 1;
         console.log('finished page ' + (page + 1));
     }
 
     const sourceAccountData = accounts.filter((a) => {
-        if (sourceAccount.startsWith('#')) {
-            return a.id == sourceAccount.substring(1);
+        if (opts.sourceAccount.startsWith('#')) {
+            return a.id == opts.sourceAccount.substring(1);
         } else {
-            return a.attributes['name'] == sourceAccount;
+            return a.attributes['name'] == opts.sourceAccount;
         }
     })
 
@@ -61,7 +75,7 @@ async function main(sourceAccount: string, file?: string, fireflyKey?: string, s
         throw new Error('source account is ambiguous');
     }
 
-    const matcher = new TransactioMatcher({fireflyBaseURL: 'https://finance.shehadeh.net', fireflyKey })
+    const matcher = new TransactioMatcher(client, {});
     for await (const postingJson of input) {
         const posting = Posting.parse(postingJson);
         console.log(`${posting.date} ${posting.amount} "${posting.ext?.description ?? '' }"`);
@@ -78,7 +92,7 @@ async function main(sourceAccount: string, file?: string, fireflyKey?: string, s
             });
             const accountId = accountStr.match(/#([0-9]+)/g)![0].substring(1);
             const accountInfo = accounts.find((a) => a.id === accountId)!;
-            const type = accountInfo.attributes['type'] === 'asset'
+            const type: 'deposit'|'expense'|'withdrawal'|'transfer' = accountInfo.attributes['type'] === 'asset'
                 ? 'transfer'
                 : (accountInfo.attributes['type'] === 'expense'
                     ? 'withdrawal'
@@ -101,14 +115,20 @@ async function main(sourceAccount: string, file?: string, fireflyKey?: string, s
                 destination_id: posting.amount[0] == '+' ? sourceAccount : destAccount,
                 source_id: posting.amount[0] == '+' ? destAccount : sourceAccount,
                 description: posting.ext.description ?? '?',
-                amount: posting.amount.substring(1)
+                amount: posting.amount.substring(1),
             };
+            client.fetch.POST('/v1/transactions', {
+                body: {
+                    fire_webhooks: true,
+                    transactions: [newTransaction]
+                }
+            })
             const url = 'https://finance.shehadeh.net/api/v1/transactions';
             const result = await fetch(url, {
                 'method': 'POST',
                 'body': JSON.stringify({transactions: [newTransaction]}),
                 'headers': {
-                    'Authorization':  `Bearer ${fireflyKey}`,
+                    'Authorization':  `Bearer ${opts.fireflyKey}`,
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 }

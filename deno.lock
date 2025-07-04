@@ -11,6 +11,7 @@
     "npm:ink@*": "4.4.1_react@18.3.1",
     "npm:ofx-data-extractor@*": "1.4.0",
     "npm:ofx-js@*": "0.2.0",
+    "npm:openapi-fetch@*": "0.14.0",
     "npm:react@*": "18.3.1",
     "npm:zod@*": "3.22.4"
   },
@@ -199,6 +200,15 @@
       "dependencies": [
         "mimic-fn"
       ]
+    },
+    "openapi-fetch@0.14.0": {
+      "integrity": "sha512-PshIdm1NgdLvb05zp8LqRQMNSKzIlPkyMxYFxwyHR+UlKD4t2nUjkDhNxeRbhRSEd3x5EUNh2w5sJYwkhOH4fg==",
+      "dependencies": [
+        "openapi-typescript-helpers"
+      ]
+    },
+    "openapi-typescript-helpers@0.0.15": {
+      "integrity": "sha512-opyTPaunsklCBpTK8JGef6mfPhLSnyy5a0IN9vKtx3+4aExf+KxEqYwIy3hqkedXIB97u357uLMJsOnm3GVjsw=="
     },
     "patch-console@2.0.0": {
       "integrity": "sha512-0YNdUceMdaQwoKce1gatDScmMo5pu/tfABfnzEqeG0gtTmd7mh/WcwgUjtAeOU7N8nFFlbQBnFK2gXW5fGvmMA=="

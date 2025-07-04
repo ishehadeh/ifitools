@@ -1,5 +1,5 @@
 import { Posting } from "../ifx/ifx-zod.ts";
-import { fireflySearch, TransactionSearchResult } from "./firefly-iii/search.ts";
+import { FireflyClient, FireflyTransaction, throwOnError } from "./firefly-iii/client.ts";
 
 export type TransactionMatcherOptions = {
     /** an override for all source accounts in the given postings, or a map from Firefly Source Account to Posting source account matcher.
@@ -16,9 +16,6 @@ export type TransactionMatcherOptions = {
 
     bufferTimeBefore?: Temporal.Duration,
     bufferTimeAfter?: Temporal.Duration,
-
-    fireflyKey: string,
-    fireflyBaseURL: string,
 }
 
 export class TransactioMatcher {
@@ -27,10 +24,9 @@ export class TransactioMatcher {
     #bufferTimeBefore: Temporal.Duration;
     #bufferTimeAfter: Temporal.Duration;
     #defaultToPostingAccount: boolean;
-    #fireflyKey: string;
-    #fireflyBaseURL: string
+    #client: FireflyClient;
 
-    constructor(opts: TransactionMatcherOptions) {
+    constructor(client: FireflyClient, opts: TransactionMatcherOptions) {
         if (typeof(opts.sourceAccount) === 'string') {
             this.#sourceAccount[opts.sourceAccount] = /.*/; 
         } else if (typeof(opts.sourceAccount) === 'object') {
@@ -47,16 +43,19 @@ export class TransactioMatcher {
         this.#bufferTimeBefore = opts.bufferTimeBefore ?? Temporal.Duration.from({ 'days': 1})
 
         this.#defaultToPostingAccount = opts.defaultToPostingAccount ?? false;
-        this.#fireflyKey = opts.fireflyKey;
-        this.#fireflyBaseURL = opts.fireflyBaseURL;
+        this.#client = client;
     }
 
-    findMatchingTransaction(posting: Posting): Promise<TransactionSearchResult[]> {
+    async findMatchingTransaction(posting: Posting): Promise<FireflyTransaction[]> {
         const searchString = this.#generateSearchForPosting(posting);
-        return fireflySearch(searchString, {
-            apiKey: this.#fireflyKey,
-            baseURL: this.#fireflyBaseURL
-        });
+        const { data } = await throwOnError(this.#client.fetch.GET('/v1/search/transactions', {
+            params: {
+                query: {
+                    query: searchString
+                }
+            }
+        }));
+        return data!.data;
     }
 
     #generateSearchForPosting(posting: Posting): string {
