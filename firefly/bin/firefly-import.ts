@@ -6,7 +6,7 @@ import * as json from "@std/json/mod.ts";
 import { TextLineStream } from "@std/streams/mod.ts";
 import { TransactioMatcher } from "../matcher.ts";
 import { FireflyRequestFailed } from "../firefly-iii/common.ts";
-import { FireflyAccountRead, fireflyClient, FireflyClient } from "../firefly-iii/client.ts";
+import { FireflyAccountRead, fireflyClient, FireflyClient, throwOnError } from "../firefly-iii/client.ts";
 
 type FireflyImportOpts = {
     fireflyKey: string,
@@ -19,18 +19,22 @@ await new Command()
   .name("firefly-match")
   .version("0.1.0")
   .description("try to match IFX transactions to firefly-iii transactions")
-  .option('--firefly-key <fireflyKey:string>', 'firefly-III API key', {
-    required: true
-  })
-  .env('FIREFLY_KEY=<fireflyKey:string>', 'firefly-III API key')
-  .option('--firefly-url <fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)', {
-    required: true
-  })
+  .option('--firefly-key <fireflyKey:string>', 'firefly-III API key')
+  .env('FIREFLY_KEY=<fireflyKeyEnv:string>', 'firefly-III API key')
+  .option('--firefly-url <fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)')
   .env('FIREFLY_URL=<fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)')
   .option('--source-account <account:string>', 'firefly-III account to search', {required: true})
   .arguments('[ifxFile:string]')
   .action((opts, file) => {
-    main({...opts, file})
+    const fireflyKey = opts.fireflyKey;
+    if (fireflyKey === undefined) {
+        throw new Error('firefly key unset');
+    }
+    const fireflyUrl = opts.fireflyUrl;
+    if (fireflyUrl === undefined) {
+        throw new Error('firefly url unset');
+    }
+    main({...opts, file, fireflyKey, fireflyUrl})
   })
   .parse(Deno.args);
 
@@ -75,7 +79,10 @@ async function main(opts: FireflyImportOpts) {
         throw new Error('source account is ambiguous');
     }
 
-    const matcher = new TransactioMatcher(client, {});
+    const matcher = new TransactioMatcher(client, {
+        bufferTimeBefore: Temporal.Duration.from({ days: 4 }),
+        bufferTimeAfter: Temporal.Duration.from({ days: 1 }),
+    });
     for await (const postingJson of input) {
         const posting = Posting.parse(postingJson);
         console.log(`${posting.date} ${posting.amount} "${posting.ext?.description ?? '' }"`);
@@ -117,27 +124,13 @@ async function main(opts: FireflyImportOpts) {
                 description: posting.ext.description ?? '?',
                 amount: posting.amount.substring(1),
             };
-            client.fetch.POST('/v1/transactions', {
+            const result = await throwOnError(client.fetch.POST('/v1/transactions', {
                 body: {
                     fire_webhooks: true,
                     transactions: [newTransaction]
                 }
-            })
-            const url = 'https://finance.shehadeh.net/api/v1/transactions';
-            const result = await fetch(url, {
-                'method': 'POST',
-                'body': JSON.stringify({transactions: [newTransaction]}),
-                'headers': {
-                    'Authorization':  `Bearer ${opts.fireflyKey}`,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
-            const resultBody = await result.json();
-            if (!result.ok) {
-                throw new FireflyRequestFailed(result.status, result.statusText, resultBody, url);
-            };
-            console.log(`created transaction: https://finance.shehadeh.net/transactions/show/${resultBody['data']['id']}`);
+            }));
+            console.log(`created transaction: https://finance.shehadeh.net/transactions/show/${result.data!.data.id}`);
         } else {
             for (const txn of matchingTransactions) {
                 console.log('    - ' + server + '/transactions/show/' + txn.id);

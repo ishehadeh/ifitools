@@ -52,7 +52,7 @@ export class AccountsResource {
      * @throws FireflyRequestFailed
      */
     async list(params: ListAccountParameters): Promise<ListAccountResult> {
-        const { data } = await throwOnError(this.client.fetch.GET('/v1/accounts', { query: params }));
+        const { data } = await throwOnError(this.client.fetch.GET('/v1/accounts', { params: { query: params } }));
         return data!;
     }
 }

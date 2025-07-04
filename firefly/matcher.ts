@@ -1,4 +1,5 @@
 import { Posting } from "../ifx/ifx-zod.ts";
+import BigNumber from "bignumber";
 import { FireflyClient, FireflyTransaction, throwOnError } from "./firefly-iii/client.ts";
 
 export type TransactionMatcherOptions = {
@@ -55,14 +56,31 @@ export class TransactioMatcher {
                 }
             }
         }));
-        return data!.data;
+
+        const targetAmount = new BigNumber(posting.amount);
+        const transactionsWithMatchingAmounts: FireflyTransaction[] = [];
+        for (const txGroup of data!.data) {
+            let total = new BigNumber(0);
+            for (const tx of txGroup.attributes.transactions) {
+                if (tx.type === 'withdrawal') {
+                    total = total.minus(tx.amount);
+                } else {
+                    total = total.plus(tx.amount);
+                }
+            }
+
+            if (total.eq(targetAmount)) {
+                transactionsWithMatchingAmounts.push(txGroup);
+            }
+        }
+        return transactionsWithMatchingAmounts;
     }
 
     #generateSearchForPosting(posting: Posting): string {
         const date = Temporal.PlainDateTime.from(posting.date);
         const dateRangeEnd = date.add(this.#bufferTimeAfter);
         const dateRangeStart = date.subtract(this.#bufferTimeBefore);
-        const baseQuery = `amount:${posting.amount} date_after:${dateRangeStart.toPlainDate()} date_before:${dateRangeEnd.toPlainDate()}`;
+        const baseQuery = `date_after:${dateRangeStart.toPlainDate()} date_before:${dateRangeEnd.toPlainDate()}`;
         let accountQuery = '';
         if (posting.amount.startsWith('+')) {
             let account = this.#mapDestAccount(posting.account);
