@@ -12,21 +12,21 @@ function waitForElementToExist(selector) {
       if (document.querySelector(selector)) {
         return resolve(document.querySelector(selector));
       }
-  
+
       const observer = new MutationObserver(() => {
         if (document.querySelector(selector)) {
           resolve(document.querySelector(selector));
           observer.disconnect();
         }
       });
-  
+
       observer.observe(document.body, {
         subtree: true,
         childList: true,
       });
     });
   }
-  
+
   /** Lowercase a string, except for the first character of every word
    *
    * source: https://stackoverflow.com/a/196991/8387443
@@ -41,7 +41,7 @@ function waitForElementToExist(selector) {
       (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase(),
     );
   }
-  
+
   /**
    * @returns {IterableIterator<Element>}
    */
@@ -49,7 +49,7 @@ function waitForElementToExist(selector) {
     return document.querySelectorAll(".c1-ease-card-transactions-view__table")
       .values();
   }
-  
+
   /** Get the title of transaction table from one of wrapper elements returned by `getTransactionTables`
    *
    * @param {HTMLElement} tbl
@@ -67,7 +67,7 @@ function waitForElementToExist(selector) {
     if (titleSpans[0]) return titleSpans[0].textContent.trim();
     return titleElem.textContent.trim();
   }
-  
+
   /** Get a series of transaction wrapper elements from a table wrapper element
    *
    * @param {Element} tbl
@@ -78,7 +78,7 @@ function waitForElementToExist(selector) {
   function getTransactionElementsFromTable(tbl) {
     return tbl.querySelectorAll(".c1-ease-table__body c1-ease-row").values();
   }
-  
+
   /**
    * Information about a payment
    * @typedef {Object} C1Payment
@@ -86,14 +86,14 @@ function waitForElementToExist(selector) {
    * @property {string} method
    * @property {string} confirmationCode
    */
-  
+
   /** Information about a business's adress and phone
    * @typedef {Object} C1AddressInfo
    * @property {string?} street
    * @property {string} address
    * @property {string} phone
    */
-  
+
   /**
    * Information from a transaction drawer element
    * @typedef {Object} C1Transaction
@@ -107,7 +107,7 @@ function waitForElementToExist(selector) {
    * @property {Date?} datePosted
    * @property {string} descriptionOnStatement
    */
-  
+
   /**
    * @param {HTMLElement} txnElem
    *
@@ -127,10 +127,10 @@ function waitForElementToExist(selector) {
         rowInfos[name] = value;
       }
     }
-  
+
     return rowInfos;
   }
-  
+
   /**
    * @param {HTMLElement} txnElem
    *
@@ -139,9 +139,9 @@ function waitForElementToExist(selector) {
   async function getTransactionElementDetails(txnElem) {
     // expand the drawer
     txnElem.click();
-  
+
     await waitForElementToExist(".c1-ease-txns-drawer__row");
-  
+
     const description = txnElem.querySelector(
       "div.c1-ease-txns-description__description",
     ).textContent.trim();
@@ -152,7 +152,7 @@ function waitForElementToExist(selector) {
     const amount = txnElem.querySelector(
       "c1-ease-cell.c1-ease-column-amount > span:nth-of-type(1)",
     ).textContent.trim();
-  
+
     const metadata = getTransactionDrawerMetadata(txnElem);
     let address;
     let datePosted = "Posted" in metadata
@@ -165,7 +165,7 @@ function waitForElementToExist(selector) {
         }'`,
       );
     }
-  
+
     let date = "Purchased" in metadata
       ? new Date(metadata["Purchased"])
       : datePosted;
@@ -199,7 +199,7 @@ function waitForElementToExist(selector) {
         confirmationCode: metadata["Confirmation Code"],
       };
     }
-  
+
     return {
       description,
       category,
@@ -212,7 +212,7 @@ function waitForElementToExist(selector) {
       paymentInfo,
     };
   }
-  
+
   /**
    * @param {HTMLElement} tableElem
    *
@@ -223,10 +223,10 @@ function waitForElementToExist(selector) {
     for (const txnElem of getTransactionElementsFromTable(tableElem)) {
       txns.push(await getTransactionElementDetails(txnElem));
     }
-  
+
     return txns;
   }
-  
+
   /**
    * @param {string} tableName
    *
@@ -240,14 +240,14 @@ function waitForElementToExist(selector) {
       }
       tableNames.push(getTransactionTableName(table));
     }
-  
+
     throw new Error(
       `No table found with name "${tableName}", found: "${
         tableNames.join('" "')
       }"`,
     );
   }
-  
+
   function ledgerDate(date) {
     try {
       return date.toISOString().split("T")[0];
@@ -255,12 +255,12 @@ function waitForElementToExist(selector) {
       throw new Error(`cannot convert '${date}' to YYYY-MM-DD: ${e}`);
     }
   }
-  
+
   const CARD_MAP = {
     "Ian S. ...0107": "liabilities:payable:capitalone:journey",
     "PNC Bank, NA ...9264": "assets:pnc:virtual-wallet:spend",
   };
-  
+
   /**
    * @param {C1Transaction} txn
    * @returns {string}
@@ -271,9 +271,9 @@ function waitForElementToExist(selector) {
       // add date2 as the purchase date, if that isn't the same as date1
       ledgerTxn += `=${ledgerDate(txn.date)}`;
     }
-  
+
     ledgerTxn += ` ${txn.description}\n`;
-  
+
     if (txn.address) {
       const [city, stateZipCountry] = txn.address.address.split(",");
       const normPhone = txn.address.phone.replace(/[^0-9]/ig, "");
@@ -290,7 +290,7 @@ function waitForElementToExist(selector) {
       ledgerTxn += ` state:${state}, zip:${zip}\n`;
     }
     strippedAmount = txn.amount.split("$")[1];
-  
+
     const c1CardAccount = CARD_MAP[txn.card] || "liabilities";
     if (txn.paymentInfo) {
       const paymentSource = CARD_MAP[txn.paymentInfo.source] || "assets";
@@ -300,10 +300,10 @@ function waitForElementToExist(selector) {
       ledgerTxn += `    ${c1CardAccount}  -${strippedAmount} USD\n`;
       ledgerTxn += `    expenses:unknown   ${strippedAmount} USD\n`;
     }
-  
+
     return ledgerTxn;
   }
-  
+
   /**
    * @param {Date} date
    * @returns {string}
@@ -312,19 +312,19 @@ function waitForElementToExist(selector) {
     const localTzTotalSec = date.getTimezoneOffset();
     const localTzMin = Math.floor(Math.abs(localTzTotalSec) / 60);
     const localTzSec = Math.abs(localTzTotalSec) - localTzMin * 60;
-  
+
     const utc = new Date(date.getTime() - localTzTotalSec * 60000);
     const sign = localTzTotalSec < 0 ? "+" : "-";
     return utc.toISOString().replace(/\.\d{3}.*$/, "") + sign +
       localTzMin.toFixed(0).padStart(2, "0") + ":" +
       localTzSec.toFixed(0).padStart(2, "0");
   }
-  
+
   function normAmount(amt) {
     const strippedAmount = amt.split("$")[1];
     return strippedAmount.replace(/0+$/g, "").replace(/\.$/g, ".0");
   }
-  
+
   /**
    * @param {C1Transaction} txn
    * @returns {string}
@@ -338,7 +338,7 @@ function waitForElementToExist(selector) {
       // add date2 as the purchase date, if that isn't the same as date1
       ext["datePurchased"] = isoSecAndTZ(txn.date);
     }
-  
+
     if (txn.address) {
       const [city, stateZipCountry] = txn.address.address.split(",");
       const normPhone = txn.address.phone.replace(/[^0-9]/ig, "");
@@ -355,7 +355,7 @@ function waitForElementToExist(selector) {
       ext["address"] = address;
     }
     strippedAmount = normAmount(txn.amount);
-  
+
     const cardSuffix = txn.card.replace(/^.*\.\.\./, "");
     const amountSign = txn.paymentInfo ? "+" : "-";
     return {
@@ -367,13 +367,13 @@ function waitForElementToExist(selector) {
       commodity: "USD",
     };
   }
-  
+
   waitForElementToExist("div.c1-ease-account-hero__tertiary-content.ng-star-inserted c1-ease-account-details-top-right-grid-cell")
     .then((el) => {
       el.innerHTML += `<button id="ledger-copy" class="c1-ease-account-details-top-right-grid-cell__payment-button c1-ease-button c1-ease-button--ghost ng-star-inserted"> Copy Ledger Transactions</button>`
       document.getElementById("ledger-copy").onclick = doCopy
     })
-  
+
   async function doCopy() {
         const pendingTxns = await getTransactionsFromTableByName(
         "Pending Transactions",
@@ -397,8 +397,7 @@ function waitForElementToExist(selector) {
       GM.openInTab(URL.createObjectURL(new Blob([ledgerJournal]), '_blank')).focus();
     }
   }
-  
+
   GM.registerMenuCommand("Copy Ledger Transaction", async () => {
     await doCopy()
   });
-  
