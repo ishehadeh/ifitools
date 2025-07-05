@@ -33,7 +33,15 @@ export function parseIfxAmount(s: string): BigNumber {
   return BigNumber(s)
 }
 
-export function formatIfxDate(date: Date): string {
+export function formatIfxDate(date: Date|Temporal.ZonedDateTime): string {
+  if (date instanceof Temporal.ZonedDateTime) {
+      return date.toString({
+        calendarName: 'never',
+        timeZoneName: 'never',
+        smallestUnit: 'second'
+      });
+  }
+
   const tzo = -date.getTimezoneOffset();
   const dif = tzo >= 0 ? "+" : "-";
   const pad = (num: number) => (num < 10 ? "0" : "") + num;
