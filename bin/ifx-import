@@ -1,2 +1,2 @@
 #!/bin/sh
-exec deno run -- "$0/../../ifx-import/bin/ifx-import.ts" "$@"
+exec deno run --unstable-temporal -- "$0/../../ifx-import/bin/ifx-import.ts" "$@"
