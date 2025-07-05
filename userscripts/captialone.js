@@ -27,21 +27,6 @@ function waitForElementToExist(selector) {
     });
   }
 
-  /** Lowercase a string, except for the first character of every word
-   *
-   * source: https://stackoverflow.com/a/196991/8387443
-   *
-   * @param {string} str string to title case
-   *
-   * @returns {string}
-   */
-  function toTitleCase(str) {
-    return str.replace(
-      /\w\S*/g,
-      (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase(),
-    );
-  }
-
   /**
    * @returns {IterableIterator<Element>}
    */
@@ -246,62 +231,6 @@ function waitForElementToExist(selector) {
         tableNames.join('" "')
       }"`,
     );
-  }
-
-  function ledgerDate(date) {
-    try {
-      return date.toISOString().split("T")[0];
-    } catch (e) {
-      throw new Error(`cannot convert '${date}' to YYYY-MM-DD: ${e}`);
-    }
-  }
-
-  const CARD_MAP = {
-    "Ian S. ...0107": "liabilities:payable:capitalone:journey",
-    "PNC Bank, NA ...9264": "assets:pnc:virtual-wallet:spend",
-  };
-
-  /**
-   * @param {C1Transaction} txn
-   * @returns {string}
-   */
-  function c1TransactionToLedger(txn) {
-    let ledgerTxn = `${ledgerDate(txn.datePosted ?? txn.date ?? new Date())}`;
-    if (txn.datePosted && txn.date != txn.datePosted) {
-      // add date2 as the purchase date, if that isn't the same as date1
-      ledgerTxn += `=${ledgerDate(txn.date)}`;
-    }
-
-    ledgerTxn += ` ${txn.description}\n`;
-
-    if (txn.address) {
-      const [city, stateZipCountry] = txn.address.address.split(",");
-      const normPhone = txn.address.phone.replace(/[^0-9]/ig, "");
-      const [state, zip, _country] = stateZipCountry.trim().split(" ");
-      // for my needds country is always US (as of 2023-06)
-      ledgerTxn += "    ;";
-      if (txn.address.street) {
-        ledgerTxn += " street:" + txn.address.street + ",";
-      }
-      if (city.replace(/[^0-9]/ig, "") != normPhone) {
-        // sometimes a mangled phone number ends up in the city field.
-        ledgerTxn += " city:" + toTitleCase(city) + ",";
-      }
-      ledgerTxn += ` state:${state}, zip:${zip}\n`;
-    }
-    strippedAmount = txn.amount.split("$")[1];
-
-    const c1CardAccount = CARD_MAP[txn.card] || "liabilities";
-    if (txn.paymentInfo) {
-      const paymentSource = CARD_MAP[txn.paymentInfo.source] || "assets";
-      ledgerTxn += `    ${c1CardAccount}  ${strippedAmount} USD\n`;
-      ledgerTxn += `    ${paymentSource}  -${strippedAmount} USD\n`;
-    } else {
-      ledgerTxn += `    ${c1CardAccount}  -${strippedAmount} USD\n`;
-      ledgerTxn += `    expenses:unknown   ${strippedAmount} USD\n`;
-    }
-
-    return ledgerTxn;
   }
 
   /**
