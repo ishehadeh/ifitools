@@ -286,7 +286,7 @@ function waitForElementToExist(selector) {
     strippedAmount = normAmount(txn.amount);
 
     const cardSuffix = txn.card.replace(/^.*\.\.\./, "");
-    const amountSign = txn.paymentInfo ? "+" : "-";
+    const amountSign = txn.amount.startsWith('-') ? '+' : '-';
     return {
       date,
       account: cardSuffix,
