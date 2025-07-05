@@ -140,7 +140,7 @@ function waitForElementToExist(selector) {
 
     const metadata = getTransactionDrawerMetadata(txnElem);
     let address;
-    let datePosted = "Posted" in metadata
+    const datePosted = "Posted" in metadata
       ? new Date(metadata["Posted"])
       : undefined;
     if (datePosted !== undefined && !isFinite(datePosted)) {
@@ -151,7 +151,7 @@ function waitForElementToExist(selector) {
       );
     }
 
-    let date = "Purchased" in metadata
+    const date = "Purchased" in metadata
       ? new Date(metadata["Purchased"])
       : datePosted;
     if (date !== undefined && !isFinite(date)) {
@@ -259,7 +259,7 @@ function waitForElementToExist(selector) {
    * @returns {string}
    */
   function c1TransactionToIFX(txn) {
-    let date = isoSecAndTZ(txn.datePosted ?? txn.date ?? new Date());
+    const date = isoSecAndTZ(txn.datePosted ?? txn.date ?? new Date());
     const ext = {
       description: txn.description,
     };
