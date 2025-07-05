@@ -7,6 +7,7 @@ import { TextLineStream } from "@std/streams/mod.ts";
 import { TransactioMatcher } from "../matcher.ts";
 import { FireflyRequestFailed } from "../firefly-iii/common.ts";
 import { FireflyAccountRead, fireflyClient, FireflyClient, throwOnError } from "../firefly-iii/client.ts";
+import BigNumber from "bignumber";
 
 type FireflyImportOpts = {
     fireflyKey: string,
@@ -20,7 +21,7 @@ await new Command()
   .version("0.1.0")
   .description("try to match IFX transactions to firefly-iii transactions")
   .option('--firefly-key <fireflyKey:string>', 'firefly-III API key')
-  .env('FIREFLY_KEY=<fireflyKeyEnv:string>', 'firefly-III API key')
+  .env('FIREFLY_KEY=<fireflyKey:string>', 'firefly-III API key')
   .option('--firefly-url <fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)')
   .env('FIREFLY_URL=<fireflyUrl:string>', 'firefly-III base URL key (e.g. https://demo.firefly-iii.org)')
   .option('--source-account <account:string>', 'firefly-III account to search', {required: true})
@@ -94,16 +95,16 @@ async function main(opts: FireflyImportOpts) {
                 message: "choose destination account",
                 list: true,
                 info: true,
-                validate: (input) => /#([0-9]+)/g.test(input),
-                suggestions: accounts.map((a) => `${a.attributes['name']} (${a.attributes['type']}, #${a.id})`) 
+                validate: (input) => input === 'SKIP' || /#([0-9]+)/g.test(input),
+                suggestions: [...accounts.map((a) => `${a.attributes['name']} (${a.attributes['type']}, #${a.id})`), 'SKIP']
             });
+            if (accountStr === 'SKIP') continue;
+
             const accountId = accountStr.match(/#([0-9]+)/g)![0].substring(1);
             const accountInfo = accounts.find((a) => a.id === accountId)!;
-            const type: 'deposit'|'expense'|'withdrawal'|'transfer' = accountInfo.attributes['type'] === 'asset'
+            const type: 'deposit'|'withdrawal'|'transfer' = accountInfo.attributes['type'] === 'asset'
                 ? 'transfer'
-                : (accountInfo.attributes['type'] === 'expense'
-                    ? 'withdrawal'
-                    : 'deposit');
+                : (posting.amount.startsWith('-') ? 'withdrawal' : 'deposit');
             if (type === 'withdrawal' && posting.amount[0] != '-') {
                 throw new Error('non-negative amounts are forbidden on withdrawals');
             }
